@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Registrar Pago</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0;
+      padding: 40px 20px;
+      display: flex;
+      justify-content: center;
+    }
+    form {
+      background: #fff;
+      padding: 30px 35px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      max-width: 400px;
+      width: 100%;
+    }
+    h2 {
+      margin-bottom: 24px;
+      color: #222;
+      text-align: center;
+    }
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 8px;
+      color: #444;
+    }
+    #importe-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-bottom: 24px;
+      outline: none;
+      cursor: text;
+    }
+    #simbolo-peso {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #fa8a35;
+      margin-top: 8px;
+      user-select: none;
+    }
+    #entero {
+      font-size: 3rem;
+      font-weight: 700;
+      color: #222;
+      line-height: 1;
+      user-select: none;
+    }
+    #decimales {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #fa8a35;
+      margin-top: 12px;
+      user-select: none;
+    }
+    #importe-input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: 1.5px solid #ccc;
+      margin-bottom: 20px;
+      transition: border-color 0.3s ease;
+    }
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #fa8a35;
+      box-shadow: 0 0 8px rgba(250, 138, 53, 0.3);
+    }
+    button {
+      width: 100%;
+      padding: 14px 0;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: #fa8a35;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background: #e6792c;
+    }
+  </style>
+</head>
+<body>
+
+<form id="payment-form" autocomplete="off" novalidate>
+  <h2>Registrar Pago</h2>
+
+  <label for="importe-input">Importe</label>
+  <div id="importe-container" tabindex="0" role="textbox" aria-label="Campo de importe">
+    <span id="simbolo-peso">$</span>
+    <span id="entero">0</span>
+    <span id="decimales">00</span>
+    <input type="text" id="importe-input" inputmode="numeric" pattern="[0-9]*" />
+  </div>
+
+  <label for="apellido">Apellido del Cliente</label>
+  <input type="text" id="apellido" name="apellido" required placeholder="Ej: Pérez" />
+
+  <label for="tipoTarjeta">Tipo de Tarjeta</label>
+  <select id="tipoTarjeta" name="tipoTarjeta" required>
+    <option value="" disabled selected>Seleccione...</option>
+    <option value="Débito">Débito</option>
+    <option value="Crédito">Crédito</option>
+  </select>
+
+  <button type="submit">Enviar Pago</button>
+</form>
+
+<script>
+(() => {
+  const importeInput = document.getElementById('importe-input');
+  const enteroSpan = document.getElementById('entero');
+  const decimalesSpan = document.getElementById('decimales');
+  const importeContainer = document.getElementById('importe-container');
+  const form = document.getElementById('payment-form');
+
+  let valorCentavos = 0;
+
+  function actualizarDisplay() {
+    let entero = Math.floor(valorCentavos / 100);
+    let decimales = valorCentavos % 100;
+    let enteroFormateado = entero.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    enteroSpan.textContent = enteroFormateado;
+    decimalesSpan.textContent = decimales.toString().padStart(2, '0');
+  }
+
+  actualizarDisplay();
+
+  importeContainer.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      document.getElementById('apellido').focus();
+      return;
+    }
+
+    if (['Shift', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      return;
+    }
+
+    e.preventDefault();
+    const key = e.key;
+
+    if (key === 'Backspace') {
+      valorCentavos = Math.floor(valorCentavos / 10);
+      actualizarDisplay();
+      return;
+    }
+
+    if (!/^\d$/.test(key)) return;
+
+    if (valorCentavos > 999999999) return;
+
+    valorCentavos = valorCentavos * 10 + parseInt(key, 10);
+    actualizarDisplay();
+  });
+
+  importeContainer.addEventListener('paste', e => e.preventDefault());
+  importeContainer.addEventListener('click', () => importeContainer.focus());
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+
+    if (valorCentavos <= 0) {
+      alert('Por favor, ingrese un importe válido mayor a cero.');
+      importeContainer.focus();
+      return;
+    }
+
+    const importeStr = (valorCentavos / 100).toFixed(2).replace('.', ',');
+    const apellido = form['apellido'].value.trim();
+    const tipoTarjeta = form['tipoTarjeta'].value;
+
+    if (!apellido) {
+      alert('Por favor, ingrese el apellido del cliente.');
+      form['apellido'].focus();
+      return;
+    }
+
+    if (!tipoTarjeta) {
+      alert('Por favor, seleccione el tipo de tarjeta.');
+      form['tipoTarjeta'].focus();
+      return;
+    }
+
+    const banco = localStorage.getItem('bancoSeleccionado') || 'No seleccionado';
+    const sucursal = Math.floor(Math.random() * 3) + 1; // 1 a 3
+    const caja = Math.floor(Math.random() * 5) + 1;      // 1 a 5
+
+    const data = {
+      banco,
+      importe: importeStr,
+      apellido,
+      tipoTarjeta,
+      sucursal,
+      caja
+    };
+
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbyz1w1LTKucTm8AfBCr3XXMNETsG5pRF2eVJLquayNOhzFKxldrCf1gQjWusVQZ6fV2nA/exec';
+    const queryString = new URLSearchParams(data).toString();
+    const finalURL = `${scriptURL}?${queryString}`;
+
+    // MOSTRAR EN CONSOLA
+    console.log('➡️ URL que se está enviando:', finalURL);
+
+    fetch(finalURL)
+      .then(res => res.text())
+      .then(response => {
+        if (response.startsWith('OK')) {
+          alert('¡Pago registrado en la hoja!');
+          form.reset();
+          valorCentavos = 0;
+          actualizarDisplay();
+        } else {
+          alert('Error: ' + response);
+        }
+      })
+      .catch(err => {
+        console.error('Error al enviar:', err);
+        alert('Error al registrar en la hoja.');
+      });
+  });
+})();
+</script>
+
+
+</body>
+</html>
